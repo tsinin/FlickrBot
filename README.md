@@ -1,4 +1,4 @@
 # FlickrBot
 For using, install flickr_api
 
-// Bot is working on Heroku now
+// Bot is working on Heroku now, @TsininNotificationBot
