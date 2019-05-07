@@ -21,7 +21,7 @@ def main():
     with open(args.flickr_api_path, "r") as flickr_api_file:
         flickr_keys = flickr_api_file.read().split('\n')
     app.init_bot(token, flickr_keys)
-    app.bot.polling(none_stop=True, interval=1)
+    app.BOT.polling(none_stop=True, interval=1)
 
 
 if __name__ == "__main__":
