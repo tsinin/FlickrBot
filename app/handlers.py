@@ -8,6 +8,10 @@ import flickr_api
 from flickr_api import flickrerrors
 from app import BOT, AUTH_TOKENS, USERS, BOT_TOKEN, WALKERS, FIRST_NUMS, URLS
 
+OAUTH_VERIFIER_LENGTH = 16
+
+MAX_PICTURE_SIZE = 10 ** 6
+
 SIZES = [
     'Original',
     'Large 2048',
@@ -50,7 +54,7 @@ def handle_verifier(message):
     text = message.text
     begin, end = text.find("<oauth_verifier>"), text.find("</oauth_verifier>")
     if begin != -1 and end != -1:
-        AUTH_TOKENS[hash(message.chat.id)].set_verifier(text[begin + 16:end])
+        AUTH_TOKENS[hash(message.chat.id)].set_verifier(text[begin + OAUTH_VERIFIER_LENGTH:end])
         flickr_api.set_auth_handler(AUTH_TOKENS[hash(message.chat.id)])
         USERS[hash(message.chat.id)] = flickr_api.test.login()
         os.system("mkdir ./users_data/{}".format(hash(message.chat.id)))
@@ -102,7 +106,6 @@ def handle_find_person(message):
         except flickrerrors.FlickrAPIError:
             BOT.send_message(message.chat.id, "There is no users with this name/email/URL.")
             return
-    photos = None
     if USERS.get(hash(message.chat.id)) is None:
         photos = person.getPublicPhotos()
     else:
@@ -124,26 +127,26 @@ def handle_print_3_photos_from_walker(message):
         WALKERS[hash(message.chat.id)] = None
         FIRST_NUMS[hash(message.chat.id)] = None
         return
-    i, j = FIRST_NUMS[hash(message.chat.id)], 0
+    required_photo, photo_in_walker = FIRST_NUMS[hash(message.chat.id)], 0
     for photo in WALKERS[hash(message.chat.id)]:
-        if j < i:
-            j += 1
+        if photo_in_walker < required_photo:
+            photo_in_walker += 1
             continue
         else:
-            j += 3
+            photo_in_walker += 3
         size = None
         for size_std in SIZES:
-            tmp = photo.getSizes().get(size_std)
-            if tmp is not None:
-                if int(tmp["width"]) * int(tmp["height"]) < 10 ** 6:
+            tmp_size = photo.getSizes().get(size_std)
+            if tmp_size is not None:
+                if int(tmp_size["width"]) * int(tmp_size["height"]) < MAX_PICTURE_SIZE:
                     size = size_std
                     break
         try:
             BOT.send_photo(message.chat.id, photo["sizes"][size]["source"])
-        except:
+        except Exception:
             continue
-        i += 1
-        if i == FIRST_NUMS[hash(message.chat.id)] + 3:
+        required_photo += 1
+        if required_photo == FIRST_NUMS[hash(message.chat.id)] + 3:
             break
     FIRST_NUMS[hash(message.chat.id)] += 3
     markup = types.ReplyKeyboardMarkup(row_width=1, one_time_keyboard=True)
@@ -160,7 +163,7 @@ def handle_upload(message):
         try:
             flickr_api.set_auth_handler("./users_data/{}/auth_token.dat".format(hash(message.chat.id)))
             USERS[hash(message.chat.id)] = flickr_api.test.login()
-        except:
+        except Exception:
             BOT.send_message(message.chat.id, "You're not authorized! Do it through /auth command")
             return
     BOT.send_message(message.chat.id, "Send me your photo.")
@@ -186,7 +189,7 @@ def handle_set_title(message):
         flickr_api.set_auth_handler("./users_data/{}/auth_token.dat".format(hash(message.chat.id)))
         USERS[hash(message.chat.id)] = flickr_api.test.login()
         flickr_api.upload(photo_file="Photo", title=message.text, photo_file_data=urllib.request.urlopen(URLS[hash(message.chat.id)]))
-    except:
+    except Exception:
         BOT.send_message(message.chat.id, "Oops! Error! Try later or try another photo.")
         return
 
